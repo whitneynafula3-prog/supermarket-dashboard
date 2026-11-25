@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supermarket Spend & Sampling Estimator</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <span class="badge">Statistical Analytics & Estimation Explorer</span>
+      <h1>Supermarket Transaction Insights</h1>
+      <p>
+        Interactive analysis of <strong>1,800 customer transactions (KES)</strong> comparing true
+        population parameters against live random sampling simulations.
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section-block">
+      <h2>1. Population Parameters (N = <span id="popCount">1,800</span>)</h2>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Population Mean (&mu;)</span>
+          <strong class="kpi-value" id="popMean">KES --</strong>
+          <small>True average spend per basket</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Population Std. Dev (&sigma;)</span>
+          <strong class="kpi-value" id="popStd">KES --</strong>
+          <small>Spread around population mean</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Population Variance (&sigma;&sup2;)</span>
+          <strong class="kpi-value" id="popVar">--</strong>
+          <small>Squared deviation (KES&sup2;)</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Total Revenue</span>
+          <strong class="kpi-value" id="popTotal">KES --</strong>
+          <small>Across all 1,800 records</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block simulator-panel">
+      <div class="panel-header">
+        <div>
+          <h2>2. Live Random Sampling Simulator</h2>
+          <p class="muted">
+            Draw a simple random sample without replacement and compare it to the true population mean.
+          </p>
+        </div>
+        <div class="controls">
+          <label for="sampleSize">
+            Sample Size (<em>n</em>): <strong id="sampleSizeLabel">50</strong>
+          </label>
+          <input type="range" id="sampleSize" min="10" max="300" step="5" value="50" />
+          <div class="preset-btns">
+            <button type="button" class="preset" data-n="20">n = 20</button>
+            <button type="button" class="preset" data-n="50">n = 50</button>
+            <button type="button" class="preset" data-n="100">n = 100</button>
+            <button type="button" id="redrawBtn" class="primary-btn">Draw New Sample</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid sample-grid">
+        <div class="kpi-card highlight">
+          <span class="kpi-label">Sample Mean (x&#772;)</span>
+          <strong class="kpi-value" id="sampleMean">KES --</strong>
+          <small>Point estimate of &mu;</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Sample Variance (s&sup2;)</span>
+          <strong class="kpi-value" id="sampleVar">--</strong>
+          <small>Unbiased (dividing by n &minus; 1)</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Estimation Error (|x&#772; &minus; &mu;|)</span>
+          <strong class="kpi-value" id="estError">KES --</strong>
+          <small id="errorPct">--% away from true mean</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="charts-grid">
+      <div class="chart-card">
+        <h3>Transaction Spending Distribution (KES)</h3>
+        <p class="muted">Population frequency distribution vs. active sample overlay</p>
+        <canvas id="distChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Mean Convergence Across Sample Sizes</h3>
+        <p class="muted">Comparing n = 20, 50, 100, and your selected sample against &mu;</p>
+        <canvas id="compareChart"></canvas>
+      </div>
+    </section>
+
+    <section class="section-block methodology">
+      <h2>3. How It Works</h2>
+      <ul>
+        <li>
+          <strong>Population vs. Sample Formulas:</strong> Population variance divides by
+          <code>N</code> (1,800), whereas sample variance divides by <code>n &minus; 1</code>
+          to provide an unbiased estimator.
+        </li>
+        <li>
+          <strong>Simple Random Sampling Without Replacement:</strong> Each draw selects
+          <em>n</em> distinct customer transactions using a Fisher-Yates shuffle.
+        </li>
+        <li>
+          <strong>Sampling Variability:</strong> Repeated draws of the same size produce
+          different sample means due to natural variation in basket sizes, while larger
+          samples reduce standard error (<code>&sigma; / &radic;n</code>).
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Built with Python (pandas), HTML, CSS &amp; Chart.js</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
