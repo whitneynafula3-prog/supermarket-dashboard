@@ -87,6 +87,60 @@
       </div>
     </section>
 
+    <section class="section-block">
+      <div class="panel-header">
+        <div>
+          <h2>3. Item &amp; Payment Amount Explorer</h2>
+          <p class="muted">
+            Filter transactions by a specific item, an exact amount paid (KES), or both, and view the breakdown graph.
+          </p>
+        </div>
+        <div class="controls filter-controls">
+          <label for="itemFilter">Item</label>
+          <select id="itemFilter">
+            <option value="ALL">All Items</option>
+          </select>
+
+          <label for="amountFilter">Amount Paid (KES)</label>
+          <input
+            type="number"
+            id="amountFilter"
+            min="0"
+            step="any"
+            placeholder="Any amount (e.g. 1200)"
+          />
+
+          <button type="button" id="clearFilterBtn" class="preset">Reset Filter</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Matching Transactions</span>
+          <strong class="kpi-value" id="matchCount">0</strong>
+          <small>Records matching your filter</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Total Matched Spend</span>
+          <strong class="kpi-value" id="matchTotal">KES --</strong>
+          <small>Sum of matching transactions</small>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Average Matched Spend</span>
+          <strong class="kpi-value" id="matchAvg">KES --</strong>
+          <small>Mean across matching records</small>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top: 1.25rem;">
+        <h3 id="itemAmountChartTitle">Transaction Breakdown by Item / Amount</h3>
+        <p class="muted" id="itemAmountChartSubtitle">
+          Select an item or enter a specific amount paid to inspect the distribution
+        </p>
+        <canvas id="itemAmountChart"></canvas>
+      </div>
+    </section>
+
     <section class="charts-grid">
       <div class="chart-card">
         <h3>Transaction Spending Distribution (KES)</h3>
@@ -102,7 +156,7 @@
     </section>
 
     <section class="section-block methodology">
-      <h2>3. How It Works</h2>
+      <h2>4. How It Works</h2>
       <ul>
         <li>
           <strong>Population vs. Sample Formulas:</strong> Population variance divides by
