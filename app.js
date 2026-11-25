@@ -3,6 +3,7 @@ let transactionRecords = [];
 let distChart = null;
 let compareChart = null;
 let itemAmountChart = null;
+let samplingDistChart = null;
 
 function mean(arr) {
   if (!arr.length) return 0;
@@ -128,7 +129,6 @@ function normalizeRecords(data, amounts) {
     }
   }
 
-  // Fallback if dashboard_data.json only provides numeric transaction_amounts_kes
   return amounts.map((amt) => ({
     item: null,
     amount: Number(amt),
@@ -146,7 +146,9 @@ function populateItemDropdown() {
   select.innerHTML = "";
   const allOption = document.createElement("option");
   allOption.value = "ALL";
-  allOption.textContent = uniqueItems.length ? "All Items" : "All Transactions (No Item Field)";
+  allOption.textContent = uniqueItems.length
+    ? "All Items"
+    : "All Transactions (No Item Field)";
   select.appendChild(allOption);
 
   for (const itemName of uniqueItems) {
@@ -173,7 +175,9 @@ function renderItemAmountGraph(filteredRecords, selectedItem, amountInputVal) {
   const targetAmount = hasAmountFilter ? Number(amountInputVal) : null;
 
   const itemDesc =
-    selectedItem && selectedItem !== "ALL" ? `Item: "${selectedItem}"` : "All Items";
+    selectedItem && selectedItem !== "ALL"
+      ? `Item: "${selectedItem}"`
+      : "All Items";
   const amtDesc = hasAmountFilter
     ? `Amount Paid: ${formatKES(targetAmount)}`
     : "Any Amount Paid";
@@ -212,7 +216,6 @@ function renderItemAmountGraph(filteredRecords, selectedItem, amountInputVal) {
   const amounts = filteredRecords.map((r) => r.amount);
   const hasNamedItems = filteredRecords.some((r) => r.item);
 
-  // If viewing "All Items" with named items and no exact single-amount filter, show top items by total spend
   if (selectedItem === "ALL" && !hasAmountFilter && hasNamedItems) {
     const totalsByItem = new Map();
     for (const rec of filteredRecords) {
@@ -260,7 +263,6 @@ function renderItemAmountGraph(filteredRecords, selectedItem, amountInputVal) {
     return;
   }
 
-  // Otherwise show a distribution histogram of matching transaction amounts (KES)
   const binCount = Math.min(8, Math.max(1, new Set(amounts).size));
   const bins = buildHistogramBins(amounts, binCount);
 
@@ -337,13 +339,81 @@ function resetItemAmountFilter() {
   updateItemAmountFilter();
 }
 
+function runRepeatedSampling(numSimulations = 500) {
+  if (!Array.isArray(population) || population.length === 0) return;
+
+  const n = Number(document.getElementById("sampleSize").value);
+  const popStd = stdDev(population, 0);
+  const theoreticalSE = popStd / Math.sqrt(n);
+
+  const sampleMeans = [];
+  for (let i = 0; i < numSimulations; i++) {
+    const sample = drawSampleWithoutReplacement(population, n);
+    sampleMeans.push(mean(sample));
+  }
+
+  const grandMean = mean(sampleMeans);
+  const empiricalSE = stdDev(sampleMeans, 1);
+
+  document.getElementById("simCount").textContent =
+    sampleMeans.length.toLocaleString();
+  document.getElementById("simGrandMean").textContent = formatKES(grandMean);
+  document.getElementById("simEmpiricalSE").textContent = formatKES(empiricalSE);
+  document.getElementById("simTheoreticalSE").textContent =
+    formatKES(theoreticalSE);
+
+  const bins = buildHistogramBins(sampleMeans, 12);
+  const canvas = document.getElementById("samplingDistChart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  if (samplingDistChart) samplingDistChart.destroy();
+
+  document.getElementById("samplingDistTitle").textContent =
+    `Sampling Distribution of X̄ (${numSimulations} Samples, n = ${n})`;
+  document.getElementById("samplingDistSubtitle").textContent =
+    `Empirical SE: ${formatKES(empiricalSE)} vs. Theoretical σ/√n: ${formatKES(theoreticalSE)}`;
+
+  samplingDistChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: bins.labels,
+      datasets: [
+        {
+          label: "Frequency of Sample Means (X̄)",
+          data: bins.counts,
+          backgroundColor: "rgba(20, 83, 45, 0.65)",
+          borderColor: "rgba(20, 83, 45, 1)",
+          borderWidth: 1,
+          borderRadius: 5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          title: { display: true, text: "Number of Samples" },
+        },
+        x: {
+          title: { display: true, text: "Sample Mean Spend (KES)" },
+        },
+      },
+    },
+  });
+}
+
 function renderPopulationKPIs() {
   const popMean = mean(population);
   const popVar = variance(population, 0);
   const popStd = stdDev(population, 0);
   const popTotal = population.reduce((a, b) => a + b, 0);
 
-  document.getElementById("popCount").textContent = population.length.toLocaleString();
+  document.getElementById("popCount").textContent =
+    population.length.toLocaleString();
   document.getElementById("popMean").textContent = formatKES(popMean);
   document.getElementById("popStd").textContent = formatKES(popStd);
   document.getElementById("popVar").textContent = formatNumber(popVar);
@@ -364,7 +434,8 @@ function updateSimulation() {
   document.getElementById("sampleMean").textContent = formatKES(sMean);
   document.getElementById("sampleVar").textContent = formatNumber(sVar);
   document.getElementById("estError").textContent = formatKES(error);
-  document.getElementById("errorPct").textContent = `${errorPct}% away from true mean`;
+  document.getElementById("errorPct").textContent =
+    `${errorPct}% away from true mean`;
 
   updateCharts(sample, n, popMean, sMean);
 }
@@ -382,7 +453,7 @@ function updateCharts(sample, n, popMean, sMean) {
       labels: binMeta.labels,
       datasets: [
         {
-          label: "Population (N = 1,800)",
+          label: `Population (N = ${population.length.toLocaleString()})`,
           data: binMeta.counts,
           backgroundColor: "rgba(20, 83, 45, 0.25)",
           borderColor: "rgba(20, 83, 45, 0.85)",
@@ -421,7 +492,13 @@ function updateCharts(sample, n, popMean, sMean) {
   compareChart = new Chart(compCtx, {
     type: "bar",
     data: {
-      labels: ["n = 20", "n = 50", "n = 100", `Selected (n = ${n})`, "True Mean (μ)"],
+      labels: [
+        "n = 20",
+        "n = 50",
+        "n = 100",
+        `Selected (n = ${n})`,
+        "True Mean (μ)",
+      ],
       datasets: [
         {
           label: "Mean Spend (KES)",
@@ -463,4 +540,42 @@ async function initDashboard() {
       throw new Error("transaction_amounts_kes is empty");
     }
 
-    transaction
+    transactionRecords = normalizeRecords(data, population);
+    populateItemDropdown();
+
+    renderPopulationKPIs();
+    updateSimulation();
+    updateItemAmountFilter();
+  } catch (err) {
+    console.error(err);
+    document.getElementById("popMean").textContent = "Run export first";
+    alert(
+      "Could not find dashboard_data.json in this folder yet. Export it from your Python notebook into the same folder as index.html, then refresh the page."
+    );
+  }
+}
+
+document.getElementById("sampleSize").addEventListener("input", updateSimulation);
+document.getElementById("redrawBtn").addEventListener("click", updateSimulation);
+
+document.querySelectorAll(".preset").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.getElementById("sampleSize").value = btn.dataset.n;
+    updateSimulation();
+  });
+});
+
+document
+  .getElementById("itemFilter")
+  .addEventListener("change", updateItemAmountFilter);
+document
+  .getElementById("amountFilter")
+  .addEventListener("input", updateItemAmountFilter);
+document
+  .getElementById("clearFilterBtn")
+  .addEventListener("click", resetItemAmountFilter);
+document
+  .getElementById("run500Btn")
+  .addEventListener("click", () => runRepeatedSampling(500));
+
+initDashboard();
